@@ -144,7 +144,7 @@ var z2m_buf_Devices=[];
 	z2mWebSocket();
 
 	async function z2m_parse(data)
-	{	//уберем корявости от розеток
+	{	//уберем корявости от розеток mclh03-LifeControl
 		if(data.indexOf('_l')+1)
 		{	data = data.replace(/(_l1|_l2)/g,'');
 		}
