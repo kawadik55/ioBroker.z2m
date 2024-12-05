@@ -1,6 +1,6 @@
 'use strict';
 
-/*test
+/*
  * Created with @iobroker/create-adapter v1.26.3
  */
 
@@ -25,7 +25,7 @@ var z2m_command;
  */
 function startAdapter(options) {
     // Create the adapter and define its methods
-    return adapter = utils.adapter(Object.assign({}, options, {
+	return adapter = utils.adapter(Object.assign({}, options, {
         name: 'z2m',
 
         // The ready callback is called when databases are connected and adapter received configuration.
@@ -66,8 +66,8 @@ function startAdapter(options) {
 				//adapter.log.info(JSON.stringify(state));                
 				if(state.from !='system.adapter.'+adapter.name+'.'+adapter.instance){
 				
-				adapter.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
-				adapter.log.info(JSON.stringify(state));
+				//adapter.log.info(`state ${id} changed: ${state.val} (ack = ${state.ack})`);
+				//adapter.log.info(JSON.stringify(state));
 				var aid=id.split('.')
 				try{
 //state z2m.0.grp.test.on_off changed: on (ack = false)					
@@ -110,40 +110,48 @@ function startAdapter(options) {
     }));
 }
 
-async function main() {
+async function main() 
+{
 var z2m
 var z2m_buf_Devices=[];
-adapter.setStateAsync('info.connection', false, true)
+	adapter.setStateAsync('info.connection', false, true)
+	//adapter.log.info('Всем привет!');
     // The adapters config (in the instance object everything under the attribute "native") is accessible via
     // adapter.config:
     adapter.log.debug('config option1: ' + adapter.config.option1);
     adapter.log.debug('config option2: ' + adapter.config.option2);
-		var adress='ws://'+adapter.config.option1+":"+adapter.config.option2+"/api"
-		adapter.log.debug('z2m adress: ' + adress);
-				 function z2mWebSocket() {
+	var adress='ws://'+adapter.config.option1+":"+adapter.config.option2+"/api"
+	adapter.log.debug('z2m adress: ' + adress);
+	function z2mWebSocket() 
+	{
 					 try{
 					  z2m = new WebSocket(adress);
 					  z2m.on('open', 	function open() { });
 					  z2m.on('message', function incoming(data) {z2m_parse(data);});
 					  z2m.on('error', function error(data) {adapter.log.debug(data)}); 
 					  }catch(err){adapter.log.debug(err)}
-				   }
-				   function onOpen(evt) {z2m.send('hello');}
-				   function z2m_send(message) {z2m.send(message);}
-				   var checkWSz2m = setInterval(function(){
+	}
+	function onOpen(evt) {z2m.send('hello');}
+	function z2m_send(message) {z2m.send(message);}
+	var checkWSz2m = setInterval(function()
+	{
 					 //  z2m.clients.forEach(function each(client) {if (client == z2m && client.readyState != WebSocket.OPEN) {z2mWebSocket();}});	
 					   //adapter.log.debug("*************************checkWSz2m*******************************")			  
 					  if(z2m.readyState!=1){adapter.setStateAsync('info.connection', false, true);z2mWebSocket();}else{ adapter.setStateAsync('info.connection', true, true);}
 					   
-					   }, 5000);
+	}, 5000);
 
-		z2mWebSocket();
+	z2mWebSocket();
 
-		async function z2m_parse(data){	
-		//adapter.log.debug(data)
-			var data=JSON.parse(data)
-				switch (data.topic)
-				{
+	async function z2m_parse(data)
+	{	//уберем корявости от розеток
+		if(data.indexOf('_l')+1)
+		{	data = data.replace(/(_l1|_l2)/g,'');
+		}
+		var data=JSON.parse(data);
+		
+		switch (data.topic)
+		{
 					case "bridge/config":
 						break;
 
@@ -163,14 +171,13 @@ adapter.setStateAsync('info.connection', false, true)
 						break;
 
 					case "bridge/groups":
-					//adapter.log.info(JSON.stringify(data))
-for(var i =0;i < (data.payload).length;i++){	
-await adapter.createStateAsync('grp',data.payload[i].friendly_name,"state",{name:"state",type: 'string' ,role:'state',read:true,write: true,native: {},}) 
-await adapter.createStateAsync('grp',data.payload[i].friendly_name,"brightness", {name:"brightness",type: 'number' ,role:'state',read:true,write: true,native: {},}) 
-await adapter.createStateAsync('grp',data.payload[i].friendly_name,"color_temp", {name:"color_temp",type: 'number' ,role:'state',read:true,write: true,native: {},}) 
-				
-}						
-						
+						//adapter.log.info(JSON.stringify(data))
+						for(var i =0;i < (data.payload).length;i++)
+						{	
+							await adapter.createStateAsync('grp',data.payload[i].friendly_name,"state",{name:"state",type: 'string' ,role:'state',read:true,write: true,native: {},}) 
+							await adapter.createStateAsync('grp',data.payload[i].friendly_name,"brightness", {name:"brightness",type: 'number' ,role:'state',read:true,write: true,native: {},}) 
+							await adapter.createStateAsync('grp',data.payload[i].friendly_name,"color_temp", {name:"color_temp",type: 'number' ,role:'state',read:true,write: true,native: {},}) 
+						}						
 						break;
 
 					case "bridge/event":
@@ -203,11 +210,11 @@ await adapter.createStateAsync('grp',data.payload[i].friendly_name,"color_temp",
 
 
 					default:
-					var dv=data.topic.split("/")		
-					if( dv.length <2 ){
-					
-					//adapter.log.debug("z2m|"+dv[0]+" : "+JSON.stringify(data.payload))
-							  for (let [key, value] of Object.entries(data.payload)) {	
+						var dv=data.topic.split("/")		
+						if( dv.length <2 )
+						{	//adapter.log.debug("z2m|"+dv[0]+" : "+JSON.stringify(data.payload))
+							for (let [key, value] of Object.entries(data.payload)) 
+							{	
 								try{	
 									if(key=='last_seen'||key=='elapsed'){
 									await adapter.createStateAsync('dev',dv[0],key,{name:key, type: 'string' ,role:'state',read:true,write: false,native: {},}) 										
@@ -215,33 +222,37 @@ await adapter.createStateAsync('grp',data.payload[i].friendly_name,"color_temp",
 									
 									if (value!=null){await adapter.setState('dev.'+dv[0]+'.'+key, value, true)}	
 								}catch(e){adapter.log.debug(e)}
-							  }			
+							}			
 						
-					}
+						}
 						break;
-				}
 		}
+	}
     // You can also add a subscription for multiple states. The following line watches all states starting with "lights."
     adapter.subscribeStates('dev.*');
     adapter.subscribeStates('grp.*');
     // examples for the checkPassword/checkGroup functions
-    adapter.checkPassword('admin', 'iobroker', (res) => {
+    adapter.checkPassword('admin', 'iobroker', (res) => 
+	{
         adapter.log.debug('check user admin pw iobroker: ' + res);
     });
 
-    adapter.checkGroup('admin', 'admin', (res) => {
+    adapter.checkGroup('admin', 'admin', (res) => 
+	{
         adapter.log.debug('check group user admin group admin: ' + res);
     });
 
 
-async function mk_tree_Device(data){
-adapter.log.debug(JSON.stringify(data));
-var devarr=[];
-devarr=await z2m_zesp_Device(devarr,data)
-adapter.log.debug(JSON.stringify(devarr));
-}
+	async function mk_tree_Device(data)
+	{
+		adapter.log.debug(JSON.stringify(data));
+		var devarr=[];
+		devarr=await z2m_zesp_Device(devarr,data)
+		adapter.log.debug(JSON.stringify(devarr));
+	}
 
-async function z2m_zesp_Device(devar,data){
+	async function z2m_zesp_Device(devar,data)
+	{
 					var z2m_Devices=[];
 					for(var i =1;i < (data.payload).length;i++){
 							adapter.log.info("------------data.payload["+i+"]----------")
@@ -290,10 +301,11 @@ async function z2m_zesp_Device(devar,data){
 					}					
 				
 				return devar;	
-}
+	}
 
 
-		async function addState(dpi,exp){
+	async function addState(dpi,exp)
+	{
 			var atr_type;
 					switch (exp.type)
 					{
@@ -319,14 +331,15 @@ async function z2m_zesp_Device(devar,data){
 					native: {},		
 				})		
 		
-		}
+	}
 
 
-		function H2(input, base) {return input.toString(16).padStart( 4, 0).toUpperCase();}
-		z2m_command=function(ieee,pl_name,val){
+	function H2(input, base) {return input.toString(16).padStart( 4, 0).toUpperCase();}
+	z2m_command=function(ieee,pl_name,val)
+	{
 			z2m_send('{"payload":{"'+pl_name+'":"'+val+'"},"topic":"'+ieee+'/set"}')
-			adapter.log.info('{"payload":{"'+pl_name+'":"'+val+'"},"topic":"'+ieee+'/set"}')
-		} 
+			//adapter.log.info('{"payload":{"'+pl_name+'":"'+val+'"},"topic":"'+ieee+'/set"}')
+	} 
 
 }
 
